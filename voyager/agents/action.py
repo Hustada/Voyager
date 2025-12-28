@@ -21,6 +21,7 @@ class ActionAgent:
         resume=False,
         chat_log=True,
         execution_error=True,
+        openai_api_base=None,
     ):
         self.ckpt_dir = ckpt_dir
         self.chat_log = chat_log
@@ -31,11 +32,14 @@ class ActionAgent:
             self.chest_memory = U.load_json(f"{ckpt_dir}/action/chest_memory.json")
         else:
             self.chest_memory = {}
-        self.llm = ChatOpenAI(
+        llm_kwargs = dict(
             model_name=model_name,
             temperature=temperature,
             request_timeout=request_timout,
         )
+        if openai_api_base:
+            llm_kwargs["openai_api_base"] = openai_api_base
+        self.llm = ChatOpenAI(**llm_kwargs)
 
     def update_chest_memory(self, chests):
         for position, chest in chests.items():
