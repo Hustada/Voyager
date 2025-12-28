@@ -45,12 +45,24 @@ class SkillManager:
             embedding_function=OpenAIEmbeddings(),
             persist_directory=f"{ckpt_dir}/skill/vectordb",
         )
-        assert self.vectordb._collection.count() == len(self.skills), (
-            f"Skill Manager's vectordb is not synced with skills.json.\n"
-            f"There are {self.vectordb._collection.count()} skills in vectordb but {len(self.skills)} skills in skills.json.\n"
-            f"Did you set resume=False when initializing the manager?\n"
-            f"You may need to manually delete the vectordb directory for running from scratch."
-        )
+        # Handle vectordb/JSON mismatch gracefully instead of crashing
+        vectordb_count = self.vectordb._collection.count()
+        json_count = len(self.skills)
+        if vectordb_count != json_count:
+            print(f"\033[33mSkill Manager: vectordb has {vectordb_count} skills but JSON has {json_count}. Rebuilding vectordb from JSON...\033[0m")
+            # Clear vectordb by getting all IDs and deleting them
+            if vectordb_count > 0:
+                all_ids = self.vectordb._collection.get()["ids"]
+                if all_ids:
+                    self.vectordb._collection.delete(ids=all_ids)
+            # Rebuild from JSON (JSON is source of truth)
+            for skill_name, entry in self.skills.items():
+                self.vectordb.add_texts(
+                    texts=[entry.get('description', skill_name)],
+                    ids=[skill_name],
+                    metadatas=[{"name": skill_name}],
+                )
+            print(f"\033[33mSkill Manager: Rebuilt vectordb with {len(self.skills)} skills\033[0m")
 
     @property
     def programs(self):
@@ -100,7 +112,7 @@ class SkillManager:
             f"{self.ckpt_dir}/skill/description/{dumped_program_name}.txt",
         )
         U.dump_json(self.skills, f"{self.ckpt_dir}/skill/skills.json")
-        self.vectordb.persist()
+        # Note: langchain-chroma v2 auto-persists, no need to call persist()
 
     def generate_skill_description(self, program_name, program_code):
         messages = [
@@ -111,7 +123,7 @@ class SkillManager:
                 + f"The main function is `{program_name}`."
             ),
         ]
-        skill_description = f"    // { self.llm(messages).content}"
+        skill_description = f"    // { self.llm.invoke(messages).content}"
         return f"async function {program_name}(bot) {{\n{skill_description}\n}}"
 
     def retrieve_skills(self, query):

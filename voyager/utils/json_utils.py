@@ -147,6 +147,9 @@ def fix_and_parse_json(
     """Fix and parse JSON string"""
     try:
         json_str = json_str.replace("\t", "")
+        # Strip markdown code blocks if present (GPT-4 often wraps JSON in ```json...```)
+        json_str = re.sub(r'^```(?:json)?\s*', '', json_str.strip())
+        json_str = re.sub(r'\s*```$', '', json_str.strip())
         return json.loads(json_str)
     except json.JSONDecodeError as _:  # noqa: F841
         json_str = correct_json(json_str)

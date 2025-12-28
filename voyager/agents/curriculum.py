@@ -67,15 +67,20 @@ class CurriculumAgent:
             embedding_function=OpenAIEmbeddings(),
             persist_directory=f"{ckpt_dir}/curriculum/vectordb",
         )
-        assert self.qa_cache_questions_vectordb._collection.count() == len(
-            self.qa_cache
-        ), (
-            f"Curriculum Agent's qa cache question vectordb is not synced with qa_cache.json.\n"
-            f"There are {self.qa_cache_questions_vectordb._collection.count()} questions in vectordb "
-            f"but {len(self.qa_cache)} questions in qa_cache.json.\n"
-            f"Did you set resume=False when initializing the agent?\n"
-            f"You may need to manually delete the qa cache question vectordb directory for running from scratch.\n"
-        )
+        # Handle vectordb/JSON mismatch gracefully instead of crashing
+        vectordb_count = self.qa_cache_questions_vectordb._collection.count()
+        json_count = len(self.qa_cache)
+        if vectordb_count != json_count:
+            print(f"\033[33mCurriculum Agent: vectordb has {vectordb_count} questions but JSON has {json_count}. Rebuilding vectordb from JSON...\033[0m")
+            # Clear vectordb by getting all IDs and deleting them
+            if vectordb_count > 0:
+                all_ids = self.qa_cache_questions_vectordb._collection.get()["ids"]
+                if all_ids:
+                    self.qa_cache_questions_vectordb._collection.delete(ids=all_ids)
+            # Rebuild from JSON (JSON is source of truth)
+            for question in self.qa_cache.keys():
+                self.qa_cache_questions_vectordb.add_texts(texts=[question])
+            print(f"\033[33mCurriculum Agent: Rebuilt vectordb with {len(self.qa_cache)} questions\033[0m")
         # if warm up not defined, initialize it as a dict, else, initialize all the missing value as a default value
         if not warm_up:
             warm_up = self.default_warmup
@@ -299,7 +304,7 @@ class CurriculumAgent:
     def propose_next_ai_task(self, *, messages, max_retries=5):
         if max_retries == 0:
             raise RuntimeError("Max retries reached, failed to propose ai task.")
-        curriculum = self.llm(messages).content
+        curriculum = self.llm.invoke(messages).content
         print(f"\033[31m****Curriculum Agent ai message****\n{curriculum}\033[0m")
         try:
             response = self.parse_ai_message(curriculum)
@@ -384,7 +389,7 @@ class CurriculumAgent:
         print(
             f"\033[31m****Curriculum Agent task decomposition****\nFinal task: {task}\033[0m"
         )
-        response = self.llm(messages).content
+        response = self.llm.invoke(messages).content
         print(f"\033[31m****Curriculum Agent task decomposition****\n{response}\033[0m")
         return fix_and_parse_json(response)
 
@@ -415,7 +420,7 @@ class CurriculumAgent:
                 texts=[question],
             )
             U.dump_json(self.qa_cache, f"{self.ckpt_dir}/curriculum/qa_cache.json")
-            self.qa_cache_questions_vectordb.persist()
+            # Note: langchain-chroma v2 auto-persists
             questions.append(question)
             answers.append(answer)
         assert len(questions_new) == len(questions) == len(answers)
@@ -436,7 +441,7 @@ class CurriculumAgent:
                 texts=[question],
             )
             U.dump_json(self.qa_cache, f"{self.ckpt_dir}/curriculum/qa_cache.json")
-            self.qa_cache_questions_vectordb.persist()
+            # Note: langchain-chroma v2 auto-persists
         context = f"Question: {question}\n{answer}"
         return context
 
@@ -466,7 +471,7 @@ class CurriculumAgent:
                 events=events, chest_observation=chest_observation
             ),
         ]
-        qa_response = self.qa_llm(messages).content
+        qa_response = self.qa_llm.invoke(messages).content
         try:
             # Regex pattern to extract question and concept pairs
             pattern = r"Question \d+: (.+)\nConcept \d+: (.+)"
@@ -500,6 +505,6 @@ class CurriculumAgent:
             self.render_human_message_qa_step2_answer_questions(question=question),
         ]
         print(f"\033[35mCurriculum Agent Question: {question}\033[0m")
-        qa_answer = self.qa_llm(messages).content
+        qa_answer = self.qa_llm.invoke(messages).content
         print(f"\033[31mCurriculum Agent {qa_answer}\033[0m")
         return qa_answer
