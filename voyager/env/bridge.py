@@ -102,6 +102,27 @@ class VoyagerEnv(gym.Env):
                 )
             return res.json()
 
+        # Check if bot is still connected to Minecraft (process running but bot disconnected)
+        if self.mineflayer.is_running:
+            try:
+                status_res = requests.get(f"{self.server}/status", timeout=5)
+                if status_res.status_code == 200:
+                    status = status_res.json()
+                    if not status.get("botConnected", False):
+                        print("Bot disconnected from Minecraft, reconnecting...")
+                        res = requests.post(
+                            f"{self.server}/start",
+                            json=self.reset_options,
+                            timeout=self.request_timeout,
+                        )
+                        if res.status_code != 200:
+                            raise RuntimeError(
+                                f"Failed to reconnect bot: {res.status_code}"
+                            )
+                        return res.json()
+            except requests.exceptions.RequestException as e:
+                print(f"Failed to check bot status: {e}")
+
     def step(
         self,
         code: str,

@@ -11,6 +11,8 @@ import type { VoyagerState, LogEntry, CodeEntry } from './lib/types'
 const INITIAL_STATE: VoyagerState = {
   status: {
     connected: false,
+    activityStatus: 'offline',
+    lastActivityTime: null,
     health: 20,
     hunger: 20,
     position: { x: 0, y: 64, z: 0 },
@@ -59,7 +61,12 @@ function App() {
         setBotRunning(data.running)
         setState(prev => ({
           ...prev,
-          status: { ...prev.status, connected: data.running }
+          status: {
+            ...prev.status,
+            connected: data.running,
+            activityStatus: data.activityStatus || (data.running ? 'active' : 'offline'),
+            lastActivityTime: data.lastActivityTime || null
+          }
         }))
       } else if (data.type === 'state') {
         // Restore state from server (on connect/refresh)

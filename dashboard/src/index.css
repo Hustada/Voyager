@@ -82,6 +82,12 @@ body {
   box-shadow: 0 0 8px #ef4444;
 }
 
+.status-warning {
+  background: #eab308;
+  box-shadow: 0 0 8px #eab308;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
 .status-connecting {
   background: var(--primary);
   animation: pulse-glow 1s ease-in-out infinite;

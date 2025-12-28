@@ -1,5 +1,9 @@
+export type ActivityStatus = 'offline' | 'inactive' | 'active';
+
 export interface BotStatus {
   connected: boolean;
+  activityStatus: ActivityStatus;
+  lastActivityTime: number | null;
   health: number;
   hunger: number;
   position: {

@@ -25,6 +25,25 @@ let currentState = {
   currentTask: null
 };
 
+// Activity tracking for bot presence detection
+let lastActivityTime = null;
+const ACTIVITY_TIMEOUT_MS = 30000; // 30 seconds without activity = inactive
+
+// Patterns that indicate the bot is actively doing something in-game
+const ACTIVITY_PATTERNS = [
+  /Position: x=/,
+  /Health: [\d.]+\/20/,
+  /Hunger: [\d.]+\/20/,
+  /Inventory \(\d+\/36\)/,
+  /Biome: \w+/,
+  /Starting task /,
+  /Completed task /,
+  /Task failed/,
+  /Code:/,
+  /Action Agent/,
+  /Critic.*success|failure/i,
+];
+
 // WebSocket server for real-time logs
 const wss = new WebSocketServer({ port: 8765 });
 
@@ -38,7 +57,9 @@ wss.on('connection', (ws) => {
   // Send current status and state
   ws.send(JSON.stringify({
     type: 'status',
-    running: voyagerProcess !== null
+    running: voyagerProcess !== null,
+    activityStatus: getActivityStatus(),
+    lastActivityTime: lastActivityTime
   }));
 
   // Send saved state (skills, completed tasks)
@@ -105,6 +126,27 @@ function broadcast(data) {
   });
 }
 
+function isActivityMessage(message) {
+  return ACTIVITY_PATTERNS.some(pattern => pattern.test(message));
+}
+
+function getActivityStatus() {
+  if (!currentState.running) return 'offline';
+  if (!lastActivityTime) return 'inactive';
+
+  const timeSinceActivity = Date.now() - lastActivityTime;
+  return timeSinceActivity < ACTIVITY_TIMEOUT_MS ? 'active' : 'inactive';
+}
+
+function broadcastStatus() {
+  broadcast({
+    type: 'status',
+    running: currentState.running,
+    activityStatus: getActivityStatus(),
+    lastActivityTime: lastActivityTime
+  });
+}
+
 function addLog(level, message) {
   const log = {
     type: 'log',
@@ -117,6 +159,17 @@ function addLog(level, message) {
   logBuffer.push(log);
   if (logBuffer.length > LOG_BUFFER_SIZE) {
     logBuffer.shift();
+  }
+
+  // Check if this is meaningful activity
+  if (isActivityMessage(message)) {
+    const wasInactive = getActivityStatus() === 'inactive';
+    lastActivityTime = Date.now();
+
+    // If we just became active, broadcast status change
+    if (wasInactive && currentState.running) {
+      broadcastStatus();
+    }
   }
 
   // Broadcast to clients
@@ -226,15 +279,17 @@ voyager.learn()
 
   voyagerProcess.on('close', (code) => {
     addLog('info', `Voyager exited with code ${code}`);
-    broadcast({ type: 'status', running: false });
     voyagerProcess = null;
     voyagerPid = null;
     currentState.running = false;
     currentState.currentTask = null;
+    lastActivityTime = null;
+    broadcastStatus();
   });
 
   currentState.running = true;
-  broadcast({ type: 'status', running: true });
+  lastActivityTime = Date.now(); // Mark as active on start
+  broadcastStatus();
 }
 
 function stopVoyager() {
@@ -262,8 +317,9 @@ function stopVoyager() {
   voyagerPid = null;
   currentState.running = false;
   currentState.currentTask = null;
+  lastActivityTime = null;
 
-  broadcast({ type: 'status', running: false });
+  broadcastStatus();
   addLog('info', 'Voyager stopped');
 }
 
@@ -300,6 +356,18 @@ function clearProgress() {
 }
 
 console.log('Voyager Control Server running on ws://localhost:8765');
+
+// Periodic activity check - detect when bot goes inactive
+let lastBroadcastedStatus = null;
+setInterval(() => {
+  if (currentState.running) {
+    const currentStatus = getActivityStatus();
+    if (currentStatus !== lastBroadcastedStatus) {
+      lastBroadcastedStatus = currentStatus;
+      broadcastStatus();
+    }
+  }
+}, 5000); // Check every 5 seconds
 
 // Cleanup on exit
 process.on('SIGINT', () => {

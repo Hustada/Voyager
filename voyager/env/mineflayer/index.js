@@ -405,6 +405,14 @@ app.post("/stop", (req, res) => {
     });
 });
 
+// Health check endpoint - returns whether bot is connected to Minecraft
+app.get("/status", (req, res) => {
+    res.json({
+        botConnected: bot !== null,
+        botSpawned: bot !== null && bot.entity !== undefined,
+    });
+});
+
 app.post("/pause", (req, res) => {
     if (!bot) {
         res.status(400).json({ error: "Bot not spawned" });
