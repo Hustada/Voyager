@@ -1,0 +1,3 @@
+async function mineOneIronOre(bot) {
+    // The function focuses on mining a single iron ore block. It first searches for the nearest iron ore block within a specified distance. If an iron ore block is found, it proceeds to mine that block. After successfully mining the iron ore, it confirms the action. If no iron ore is located, it indicates that there are no nearby iron ore blocks.
+}

@@ -11,6 +11,7 @@ from .agents import ActionAgent
 from .agents import CriticAgent
 from .agents import CurriculumAgent
 from .agents import SkillManager
+from .agents.shared_skill import SharedSkillManager
 
 
 # TODO: remove event memory
@@ -49,6 +50,11 @@ class Voyager:
         ckpt_dir: str = "ckpt",
         skill_library_dir: str = None,
         resume: bool = False,
+        # Multi-bot support
+        bot_id: str = "bot",
+        bot_profile_path: str = "bot_profiles.json",
+        shared_skill_dir: str = "shared_skills",
+        use_shared_skills: bool = True,
     ):
         """
         The main class for Voyager.
@@ -148,15 +154,36 @@ class Voyager:
             mode=critic_agent_mode,
             openai_api_base=openai_api_base,
         )
-        self.skill_manager = SkillManager(
-            model_name=skill_manager_model_name,
-            temperature=skill_manager_temperature,
-            retrieval_top_k=skill_manager_retrieval_top_k,
-            request_timout=openai_api_request_timeout,
-            ckpt_dir=skill_library_dir if skill_library_dir else ckpt_dir,
-            resume=True if resume or skill_library_dir else False,
-            openai_api_base=openai_api_base,
-        )
+
+        # Load bot profile for multi-bot support
+        self.bot_id = bot_id
+        self.bot_profile = self._load_bot_profile(bot_id, bot_profile_path)
+        self.bot_name = self.bot_profile.get("name", bot_id) if self.bot_profile else bot_id
+
+        # Initialize skill manager (shared or local)
+        if use_shared_skills:
+            print(f"\033[33m[{self.bot_name}] Using shared skill library at {shared_skill_dir}\033[0m")
+            self.skill_manager = SharedSkillManager(
+                model_name=skill_manager_model_name,
+                temperature=skill_manager_temperature,
+                retrieval_top_k=skill_manager_retrieval_top_k,
+                request_timeout=openai_api_request_timeout,
+                shared_dir=shared_skill_dir,
+                bot_id=bot_id,
+                bot_name=self.bot_name,
+                resume=True,
+                openai_api_base=openai_api_base,
+            )
+        else:
+            self.skill_manager = SkillManager(
+                model_name=skill_manager_model_name,
+                temperature=skill_manager_temperature,
+                retrieval_top_k=skill_manager_retrieval_top_k,
+                request_timout=openai_api_request_timeout,
+                ckpt_dir=skill_library_dir if skill_library_dir else ckpt_dir,
+                resume=True if resume or skill_library_dir else False,
+                openai_api_base=openai_api_base,
+            )
         self.recorder = U.EventRecorder(ckpt_dir=ckpt_dir, resume=resume)
         self.resume = resume
 
@@ -167,6 +194,36 @@ class Voyager:
         self.messages = None
         self.conversations = []
         self.last_events = None
+
+    def _load_bot_profile(self, bot_id: str, profile_path: str) -> dict:
+        """
+        Load bot profile from JSON file.
+
+        Args:
+            bot_id: The bot identifier to look up
+            profile_path: Path to the bot_profiles.json file
+
+        Returns:
+            Bot profile dict or None if not found
+        """
+        if not os.path.exists(profile_path):
+            print(f"\033[33mNo bot profiles found at {profile_path}, using defaults\033[0m")
+            return None
+
+        try:
+            with open(profile_path, 'r') as f:
+                profiles = json.load(f)
+
+            if bot_id in profiles:
+                profile = profiles[bot_id]
+                print(f"\033[33mLoaded profile for {profile.get('name', bot_id)}: {profile.get('personality', '')[:50]}...\033[0m")
+                return profile
+            else:
+                print(f"\033[33mNo profile found for bot_id '{bot_id}', using defaults\033[0m")
+                return None
+        except Exception as e:
+            print(f"\033[31mError loading bot profile: {e}\033[0m")
+            return None
 
     def reset(self, task, context="", reset_env=True):
         self.action_agent_rollout_num_iter = 0

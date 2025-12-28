@@ -34,6 +34,21 @@ export interface Skill {
   name: string;
   description: string;
   code: string;
+  // Multi-bot attribution
+  createdBy?: string;
+  createdByName?: string;
+  createdAt?: string;
+  version?: number;
+  successCount?: number;
+  failCount?: number;
+}
+
+export interface BotProfile {
+  name: string;
+  username: string;
+  personality: string;
+  specialization: string;
+  color: string;
 }
 
 export interface LogEntry {

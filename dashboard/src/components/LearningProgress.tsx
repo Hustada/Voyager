@@ -1,7 +1,16 @@
-import { Brain, CheckCircle, XCircle, Sparkles } from 'lucide-react'
+import { Brain, CheckCircle, XCircle, Sparkles, User } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card'
 import { Badge } from './ui/Badge'
 import type { Task, Skill } from '../lib/types'
+
+// Bot colors for attribution display
+const BOT_COLORS: Record<string, string> = {
+  minerva: '#f59e0b',
+  steve: '#22c55e',
+  scout: '#3b82f6',
+  legacy: '#a8a29e',
+  bot: '#a8a29e',
+}
 
 interface LearningProgressProps {
   currentTask: Task | null
@@ -95,10 +104,35 @@ export function LearningProgress({ currentTask, completedTasks, failedTasks, ski
                   key={i}
                   className="p-2 bg-ember-background rounded border border-ember-card-border hover:border-ember-primary/30 transition-colors"
                 >
-                  <span className="font-mono text-sm text-ember-primary">{skill.name}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-sm text-ember-primary">{skill.name}</span>
+                    {skill.createdBy && (
+                      <div
+                        className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded"
+                        style={{
+                          backgroundColor: `${BOT_COLORS[skill.createdBy] || BOT_COLORS.legacy}20`,
+                          color: BOT_COLORS[skill.createdBy] || BOT_COLORS.legacy
+                        }}
+                        title={`Created by ${skill.createdByName || skill.createdBy}`}
+                      >
+                        <User className="w-3 h-3" />
+                        <span className="font-mono">{skill.createdByName || skill.createdBy}</span>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-ember-text-muted mt-1 line-clamp-2">
                     {skill.description}
                   </p>
+                  {(skill.successCount !== undefined || skill.failCount !== undefined) && (
+                    <div className="flex gap-2 mt-1 text-xs font-mono">
+                      {skill.successCount !== undefined && skill.successCount > 0 && (
+                        <span className="text-green-400">{skill.successCount} success</span>
+                      )}
+                      {skill.failCount !== undefined && skill.failCount > 0 && (
+                        <span className="text-red-400">{skill.failCount} fail</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))
             )}

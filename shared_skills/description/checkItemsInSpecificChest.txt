@@ -1,0 +1,3 @@
+async function checkItemsInSpecificChest(bot) {
+    // The function involves checking the items in a specific chest located at the coordinates (-1007, 63, -195). It first moves the bot to the chest's position and opens the chest. After opening the chest, it logs the names and counts of the items contained within. Once the items have been checked, the function closes the chest. Finally, it confirms that the items have been checked and the chest has been closed.
+}

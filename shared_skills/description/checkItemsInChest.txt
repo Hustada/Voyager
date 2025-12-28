@@ -1,0 +1,3 @@
+async function checkItemsInChest(bot) {
+    // The function checks for items inside a specific chest located at the coordinates (-1022, 63, -193). It utilizes a helper function to perform the check on the chest's contents. The bot moves to the designated chest position to access it. The primary goal is to determine what items are available in that chest. This function is essential for inventory management and resource gathering.
+}

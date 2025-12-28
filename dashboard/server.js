@@ -92,15 +92,26 @@ wss.on('connection', (ws) => {
 
 function loadSavedState() {
   try {
-    // Load skills
-    const skillsPath = join(VOYAGER_DIR, 'ckpt', 'skill', 'skills.json');
+    // Load skills - try shared_skills first, then fall back to ckpt/skill
+    const sharedSkillsPath = join(VOYAGER_DIR, 'shared_skills', 'skills.json');
+    const localSkillsPath = join(VOYAGER_DIR, 'ckpt', 'skill', 'skills.json');
+    const skillsPath = existsSync(sharedSkillsPath) ? sharedSkillsPath : localSkillsPath;
+
     if (existsSync(skillsPath)) {
       const skillsData = JSON.parse(readFileSync(skillsPath, 'utf8'));
       currentState.skills = Object.entries(skillsData).map(([name, data]) => ({
         name,
         description: data.description || '',
-        code: data.code || ''
+        code: data.code || '',
+        // Multi-bot attribution fields
+        createdBy: data.created_by || 'legacy',
+        createdByName: data.created_by_name || 'Legacy Bot',
+        createdAt: data.created_at || null,
+        version: data.version || 1,
+        successCount: data.success_count || 0,
+        failCount: data.fail_count || 0
       }));
+      console.log(`Loaded ${currentState.skills.length} skills from ${skillsPath}`);
     }
 
     // Load completed/failed tasks
@@ -113,6 +124,12 @@ function loadSavedState() {
     }
     if (existsSync(failedPath)) {
       currentState.failedTasks = JSON.parse(readFileSync(failedPath, 'utf8'));
+    }
+
+    // Load bot profiles for color/name info
+    const profilesPath = join(VOYAGER_DIR, 'bot_profiles.json');
+    if (existsSync(profilesPath)) {
+      currentState.botProfiles = JSON.parse(readFileSync(profilesPath, 'utf8'));
     }
   } catch (e) {
     console.error('Error loading saved state:', e.message);
