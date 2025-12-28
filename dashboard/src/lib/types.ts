@@ -39,6 +39,14 @@ export interface LogEntry {
   message: string;
 }
 
+export interface CodeEntry {
+  id: string;
+  task: string;
+  code: string;
+  timestamp: string;
+  success?: boolean;
+}
+
 export interface VoyagerState {
   status: BotStatus;
   inventory: InventoryItem[];
@@ -47,4 +55,6 @@ export interface VoyagerState {
   failedTasks: string[];
   skills: Skill[];
   logs: LogEntry[];
+  currentCode: CodeEntry | null;
+  codeHistory: CodeEntry[];
 }

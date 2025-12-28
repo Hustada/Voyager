@@ -5,7 +5,8 @@ import { InventoryGrid } from './components/InventoryGrid'
 import { LearningProgress } from './components/LearningProgress'
 import { LogViewer } from './components/LogViewer'
 import { ConnectionPanel } from './components/ConnectionPanel'
-import type { VoyagerState, LogEntry } from './lib/types'
+import { CodeViewer } from './components/CodeViewer'
+import type { VoyagerState, LogEntry, CodeEntry } from './lib/types'
 
 const INITIAL_STATE: VoyagerState = {
   status: {
@@ -22,7 +23,9 @@ const INITIAL_STATE: VoyagerState = {
   completedTasks: [],
   failedTasks: [],
   skills: [],
-  logs: []
+  logs: [],
+  currentCode: null,
+  codeHistory: []
 }
 
 function App() {
@@ -32,6 +35,11 @@ function App() {
   const [botRunning, setBotRunning] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<number | null>(null)
+
+  // Code block accumulation
+  const codeAccumulator = useRef<string[]>([])
+  const isInCodeBlock = useRef(false)
+  const currentTaskForCode = useRef<string>('')
 
   // Connect to WebSocket server
   const connectWs = useCallback(() => {
@@ -53,10 +61,29 @@ function App() {
           ...prev,
           status: { ...prev.status, connected: data.running }
         }))
+      } else if (data.type === 'state') {
+        // Restore state from server (on connect/refresh)
+        setState(prev => ({
+          ...prev,
+          completedTasks: data.completedTasks || [],
+          failedTasks: data.failedTasks || [],
+          skills: (data.skills || []).map((s: { name: string; description: string; code: string }) => ({
+            name: s.name,
+            description: s.description || 'Learned skill',
+            code: s.code || ''
+          })),
+          currentTask: data.currentTask ? {
+            id: Date.now().toString(),
+            name: data.currentTask,
+            status: 'in_progress' as const,
+            attempts: 1,
+            timestamp: new Date().toISOString()
+          } : null
+        }))
       } else if (data.type === 'log') {
         const newLog: LogEntry = {
-          id: Date.now().toString(),
-          timestamp: new Date().toISOString(),
+          id: Date.now().toString() + Math.random(),
+          timestamp: data.timestamp || new Date().toISOString(),
           type: data.level as LogEntry['type'],
           message: data.message
         }
@@ -66,7 +93,7 @@ function App() {
 
         setState(prev => ({
           ...prev,
-          logs: [...prev.logs.slice(-200), newLog]
+          logs: [...prev.logs.slice(-500), newLog]
         }))
       }
     }
@@ -197,6 +224,87 @@ function App() {
         }))
       }
     }
+
+    // Track code blocks
+    if (message === 'Code:') {
+      isInCodeBlock.current = true
+      codeAccumulator.current = []
+      return
+    }
+
+    if (isInCodeBlock.current) {
+      // End of code block markers
+      if (message.startsWith('```') && codeAccumulator.current.length > 0) {
+        // Finished accumulating code
+        const code = codeAccumulator.current
+          .filter(line => !line.startsWith('```'))
+          .join('\n')
+          .trim()
+
+        if (code) {
+          const newCodeEntry: CodeEntry = {
+            id: Date.now().toString(),
+            task: currentTaskForCode.current || 'Unknown task',
+            code,
+            timestamp: new Date().toISOString()
+          }
+
+          setState(prev => ({
+            ...prev,
+            currentCode: newCodeEntry,
+            codeHistory: [...prev.codeHistory, newCodeEntry]
+          }))
+        }
+
+        isInCodeBlock.current = false
+        codeAccumulator.current = []
+        return
+      }
+
+      // Accumulate code lines
+      codeAccumulator.current.push(message)
+    }
+
+    // Track task for code association
+    if (message.includes('Task: ')) {
+      const match = message.match(/Task: (.+)/)
+      if (match) {
+        currentTaskForCode.current = match[1]
+      }
+    }
+
+    // Mark code success/failure
+    if (message.includes('Completed task ')) {
+      setState(prev => {
+        if (prev.currentCode) {
+          const updatedCode = { ...prev.currentCode, success: true }
+          return {
+            ...prev,
+            currentCode: updatedCode,
+            codeHistory: prev.codeHistory.map(c =>
+              c.id === updatedCode.id ? updatedCode : c
+            )
+          }
+        }
+        return prev
+      })
+    }
+
+    if (message.includes('Failed to complete task') || message.includes('Task failed')) {
+      setState(prev => {
+        if (prev.currentCode) {
+          const updatedCode = { ...prev.currentCode, success: false }
+          return {
+            ...prev,
+            currentCode: updatedCode,
+            codeHistory: prev.codeHistory.map(c =>
+              c.id === updatedCode.id ? updatedCode : c
+            )
+          }
+        }
+        return prev
+      })
+    }
   }
 
   useEffect(() => {
@@ -266,6 +374,12 @@ function App() {
           completedTasks={state.completedTasks}
           failedTasks={state.failedTasks}
           skills={state.skills}
+        />
+
+        {/* Generated Code */}
+        <CodeViewer
+          currentCode={state.currentCode}
+          codeHistory={state.codeHistory}
         />
 
         {/* Logs */}

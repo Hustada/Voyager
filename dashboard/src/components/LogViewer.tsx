@@ -29,15 +29,16 @@ const LOG_LABELS: Record<string, string> = {
 export function LogViewer({ logs }: LogViewerProps) {
   const [filter, setFilter] = useState<string | null>(null)
   const [autoScroll, setAutoScroll] = useState(true)
-  const logsEndRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const filteredLogs = filter
     ? logs.filter(log => log.type === filter)
     : logs
 
   useEffect(() => {
-    if (autoScroll && logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    if (autoScroll && containerRef.current) {
+      // Scroll within container only, not the page
+      containerRef.current.scrollTop = containerRef.current.scrollHeight
     }
   }, [logs, autoScroll])
 
@@ -98,7 +99,10 @@ export function LogViewer({ logs }: LogViewerProps) {
         </button>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto bg-ember-background rounded-lg p-3 font-mono text-xs">
+        <div
+          ref={containerRef}
+          className="h-full overflow-y-auto bg-ember-background rounded-lg p-3 font-mono text-xs"
+        >
           {filteredLogs.length === 0 ? (
             <p className="text-ember-text-muted">No logs yet...</p>
           ) : (
@@ -114,7 +118,6 @@ export function LogViewer({ logs }: LogViewerProps) {
               </div>
             ))
           )}
-          <div ref={logsEndRef} />
         </div>
       </CardContent>
     </Card>
