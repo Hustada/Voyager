@@ -1,14 +1,14 @@
 tqdm
 langchain
+langchain-openai
 javascript
 setuptools
 openai
 chardet
-cchardet
-chromadb==0.3.29
+# cchardet  # Removed - doesn't build on Python 3.13, chardet is sufficient
+chromadb>=0.4.0
 tiktoken
 requests
-setuptools
 gymnasium
 psutil
 minecraft_launcher_lib
