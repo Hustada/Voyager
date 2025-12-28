@@ -1,0 +1,3 @@
+async function mineThreeCopperOre(bot) {
+    // The function focuses on mining three copper ore blocks using an iron pickaxe. It first locates the nearest copper ore blocks within a specified distance. If an iron pickaxe is available in the inventory, it equips the pickaxe. After equipping, it checks if there are at least three copper ore blocks found. If sufficient copper ore is located, it proceeds to mine the blocks; otherwise, it indicates that not enough copper ore was found.
+}

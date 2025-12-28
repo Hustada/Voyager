@@ -6,7 +6,7 @@ import { LearningProgress } from './components/LearningProgress'
 import { LogViewer } from './components/LogViewer'
 import { ConnectionPanel } from './components/ConnectionPanel'
 import { CodeViewer } from './components/CodeViewer'
-import type { VoyagerState, LogEntry, CodeEntry, Skill } from './lib/types'
+import type { VoyagerState, LogEntry, CodeEntry, Skill, BotProfile } from './lib/types'
 
 const INITIAL_STATE: VoyagerState = {
   status: {
@@ -35,6 +35,8 @@ function App() {
   const [uptime, setUptime] = useState(0)
   const [wsConnected, setWsConnected] = useState(false)
   const [botRunning, setBotRunning] = useState(false)
+  const [botProfiles, setBotProfiles] = useState<Record<string, BotProfile>>({})
+  const [activeBotId, setActiveBotId] = useState<string | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<number | null>(null)
 
@@ -93,6 +95,10 @@ function App() {
             timestamp: new Date().toISOString()
           } : null
         }))
+        // Load bot profiles if provided
+        if (data.botProfiles) {
+          setBotProfiles(data.botProfiles)
+        }
       } else if (data.type === 'log') {
         const newLog: LogEntry = {
           id: Date.now().toString() + Math.random(),
@@ -342,8 +348,9 @@ function App() {
     return () => clearInterval(interval)
   }, [botRunning])
 
-  const handleStart = (port: number, apiKey: string) => {
-    wsRef.current?.send(JSON.stringify({ type: 'start', port, apiKey }))
+  const handleStart = (port: number, apiKey: string, botId: string) => {
+    wsRef.current?.send(JSON.stringify({ type: 'start', port, apiKey, botId }))
+    setActiveBotId(botId)
   }
 
   const handleStop = () => {
@@ -370,6 +377,8 @@ function App() {
         <ConnectionPanel
           connected={wsConnected}
           running={botRunning}
+          botProfiles={botProfiles}
+          activeBotId={activeBotId || undefined}
           onStart={handleStart}
           onStop={handleStop}
           onClear={handleClear}

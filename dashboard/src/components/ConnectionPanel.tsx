@@ -1,26 +1,59 @@
 import { useState } from 'react'
-import { Play, Square, Wifi, WifiOff, Trash2 } from 'lucide-react'
+import { Play, Square, Wifi, WifiOff, Trash2, User } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card'
 import { cn } from '../lib/utils'
+import type { BotProfile } from '../lib/types'
+
+// Default bot profiles in case server hasn't loaded them
+const DEFAULT_PROFILES: Record<string, BotProfile> = {
+  minerva: {
+    name: "Minerva",
+    username: "minerva",
+    personality: "Enthusiastic mining specialist who loves finding rare ores.",
+    specialization: "mining",
+    color: "#f59e0b"
+  },
+  steve: {
+    name: "Craftsman Steve",
+    username: "steve",
+    personality: "Methodical builder who takes pride in efficiency.",
+    specialization: "crafting",
+    color: "#22c55e"
+  },
+  scout: {
+    name: "Scout",
+    username: "scout",
+    personality: "Adventurous explorer who loves discovering new areas.",
+    specialization: "exploration",
+    color: "#3b82f6"
+  }
+}
 
 interface ConnectionPanelProps {
   connected: boolean
   running: boolean
-  onStart: (port: number, apiKey: string) => void
+  botProfiles?: Record<string, BotProfile>
+  activeBotId?: string
+  onStart: (port: number, apiKey: string, botId: string) => void
   onStop: () => void
   onClear: () => void
 }
 
-export function ConnectionPanel({ connected, running, onStart, onStop, onClear }: ConnectionPanelProps) {
+export function ConnectionPanel({ connected, running, botProfiles, activeBotId, onStart, onStop, onClear }: ConnectionPanelProps) {
   const [port, setPort] = useState('62305')
   // API key is stored in localStorage after first use, or loaded from environment
   const [apiKey, setApiKey] = useState(localStorage.getItem('voyager_api_key') || '')
   const [showApiKey, setShowApiKey] = useState(false)
+  const [selectedBotId, setSelectedBotId] = useState(localStorage.getItem('voyager_bot_id') || 'minerva')
+
+  const profiles = botProfiles && Object.keys(botProfiles).length > 0 ? botProfiles : DEFAULT_PROFILES
+  const selectedBot = profiles[selectedBotId] || profiles.minerva
 
   const handleStart = () => {
     if (apiKey) {
       localStorage.setItem('voyager_api_key', apiKey)
-      onStart(parseInt(port), apiKey)
+      localStorage.setItem('voyager_bot_id', selectedBotId)
+      onStart(parseInt(port), apiKey, selectedBotId)
     }
   }
 
@@ -46,6 +79,43 @@ export function ConnectionPanel({ connected, running, onStart, onStop, onClear }
         </div>
       </CardHeader>
       <CardContent>
+        {/* Bot Selector */}
+        <div className="mb-4 p-3 bg-ember-background rounded-lg border border-ember-card-border">
+          <label className="block text-xs font-mono text-ember-text-muted mb-2 uppercase">
+            Select Bot
+          </label>
+          <div className="flex gap-2">
+            {Object.entries(profiles).map(([id, bot]) => (
+              <button
+                key={id}
+                onClick={() => setSelectedBotId(id)}
+                disabled={running}
+                className={cn(
+                  "flex-1 p-3 rounded-lg border-2 transition-all disabled:opacity-50",
+                  selectedBotId === id
+                    ? "border-current bg-opacity-20"
+                    : "border-ember-card-border hover:border-ember-text-muted"
+                )}
+                style={{
+                  borderColor: selectedBotId === id ? bot.color : undefined,
+                  backgroundColor: selectedBotId === id ? `${bot.color}15` : undefined
+                }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <User className="w-4 h-4" style={{ color: bot.color }} />
+                  <span className="font-mono text-sm" style={{ color: bot.color }}>{bot.name}</span>
+                </div>
+                <div className="text-xs text-ember-text-muted capitalize">{bot.specialization}</div>
+              </button>
+            ))}
+          </div>
+          {selectedBot && (
+            <p className="mt-2 text-xs text-ember-text-muted italic line-clamp-2">
+              "{selectedBot.personality}"
+            </p>
+          )}
+        </div>
+
         <div className="flex flex-wrap items-end gap-4">
           {/* Port Input */}
           <div className="flex-1 min-w-[150px]">

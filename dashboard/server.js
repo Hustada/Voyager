@@ -81,7 +81,7 @@ wss.on('connection', (ws) => {
     const msg = JSON.parse(data);
 
     if (msg.type === 'start') {
-      startVoyager(msg.port, msg.apiKey);
+      startVoyager(msg.port, msg.apiKey, msg.botId);
     } else if (msg.type === 'stop') {
       stopVoyager();
     } else if (msg.type === 'clear') {
@@ -227,13 +227,17 @@ function updateStateFromLog(message, level) {
   }
 }
 
-function startVoyager(port, apiKey) {
+function startVoyager(port, apiKey, botId = 'bot') {
   if (voyagerProcess) {
     addLog('error', 'Voyager is already running');
     return;
   }
 
-  addLog('info', `Starting Voyager on port ${port}...`);
+  // Get bot profile for display
+  const botProfile = currentState.botProfiles?.[botId];
+  const botName = botProfile?.name || botId;
+
+  addLog('info', `Starting ${botName} on port ${port}...`);
 
   // Check for existing progress
   const ckptDir = join(VOYAGER_DIR, 'ckpt');
@@ -244,7 +248,10 @@ function startVoyager(port, apiKey) {
     addLog('info', 'Starting fresh (no saved progress)');
   }
 
-  // Create run script with the port
+  // Track active bot
+  currentState.activeBotId = botId;
+
+  // Create run script with the port and bot_id
   const pythonCode = `
 import sys
 sys.path.insert(0, '${VOYAGER_DIR}')
@@ -253,6 +260,7 @@ from voyager import Voyager
 voyager = Voyager(
     mc_port=${port},
     openai_api_key='${apiKey}',
+    bot_id='${botId}',
     action_agent_model_name='gpt-4o',
     curriculum_agent_model_name='gpt-4o',
     critic_agent_model_name='gpt-4o',

@@ -22,10 +22,15 @@ class ActionAgent:
         chat_log=True,
         execution_error=True,
         openai_api_base=None,
+        bot_profile=None,  # New: bot personality profile
     ):
         self.ckpt_dir = ckpt_dir
         self.chat_log = chat_log
         self.execution_error = execution_error
+        self.bot_profile = bot_profile or {}
+        self.bot_name = self.bot_profile.get("name", "Bot")
+        self.bot_username = self.bot_profile.get("username", "bot")
+        self.personality = self.bot_profile.get("personality", "")
         U.f_mkdir(f"{ckpt_dir}/action")
         if resume:
             print(f"\033[32mLoading Action Agent from {ckpt_dir}/action\033[0m")
@@ -78,6 +83,17 @@ class ActionAgent:
 
     def render_system_message(self, skills=[]):
         system_template = load_prompt("action_template")
+
+        # Inject bot personality at the start of the template if available
+        if self.personality:
+            personality_prefix = f"""You are {self.bot_name}, a Minecraft bot with this personality: {self.personality}
+
+When you use bot.chat(), speak in character as {self.bot_name}. Keep responses brief and natural.
+If a player or another bot talks to you directly (mentions @{self.bot_username} or your name), prioritize responding to them.
+
+"""
+            system_template = personality_prefix + system_template
+
         # FIXME: Hardcoded control_primitives
         base_skills = [
             "exploreUntil",

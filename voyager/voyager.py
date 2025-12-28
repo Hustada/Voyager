@@ -122,6 +122,11 @@ class Voyager:
         # set openai api key
         os.environ["OPENAI_API_KEY"] = openai_api_key
 
+        # Load bot profile early for multi-bot support
+        self.bot_id = bot_id
+        self.bot_profile = self._load_bot_profile(bot_id, bot_profile_path)
+        self.bot_name = self.bot_profile.get("name", bot_id) if self.bot_profile else bot_id
+
         # init agents
         self.action_agent = ActionAgent(
             model_name=action_agent_model_name,
@@ -132,6 +137,7 @@ class Voyager:
             chat_log=action_agent_show_chat_log,
             execution_error=action_agent_show_execution_error,
             openai_api_base=openai_api_base,
+            bot_profile=self.bot_profile,  # Pass bot profile for personality
         )
         self.action_agent_task_max_retries = action_agent_task_max_retries
         self.curriculum_agent = CurriculumAgent(
@@ -154,11 +160,6 @@ class Voyager:
             mode=critic_agent_mode,
             openai_api_base=openai_api_base,
         )
-
-        # Load bot profile for multi-bot support
-        self.bot_id = bot_id
-        self.bot_profile = self._load_bot_profile(bot_id, bot_profile_path)
-        self.bot_name = self.bot_profile.get("name", bot_id) if self.bot_profile else bot_id
 
         # Initialize skill manager (shared or local)
         if use_shared_skills:
