@@ -6,7 +6,7 @@ import { LearningProgress } from './components/LearningProgress'
 import { LogViewer } from './components/LogViewer'
 import { ConnectionPanel } from './components/ConnectionPanel'
 import { CodeViewer } from './components/CodeViewer'
-import type { VoyagerState, LogEntry, CodeEntry } from './lib/types'
+import type { VoyagerState, LogEntry, CodeEntry, Skill } from './lib/types'
 
 const INITIAL_STATE: VoyagerState = {
   status: {
@@ -74,10 +74,16 @@ function App() {
           ...prev,
           completedTasks: data.completedTasks || [],
           failedTasks: data.failedTasks || [],
-          skills: (data.skills || []).map((s: { name: string; description: string; code: string }) => ({
+          skills: (data.skills || []).map((s: Skill) => ({
             name: s.name,
             description: s.description || 'Learned skill',
-            code: s.code || ''
+            code: s.code || '',
+            createdBy: s.createdBy,
+            createdByName: s.createdByName,
+            createdAt: s.createdAt,
+            version: s.version,
+            successCount: s.successCount,
+            failCount: s.failCount
           })),
           currentTask: data.currentTask ? {
             id: Date.now().toString(),
