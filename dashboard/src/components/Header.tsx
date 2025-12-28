@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Cpu, MapPin, Clock, Copy, Check } from 'lucide-react'
+import { Cpu, MapPin, Clock, Copy, Check, Navigation } from 'lucide-react'
 import { cn } from '../lib/utils'
 import type { BotStatus } from '../lib/types'
 
@@ -11,8 +11,10 @@ interface HeaderProps {
 const SURFACE_Y = 64 // Approximate sea level / surface
 const TELEPORT_OFFSET = 5 // Blocks away from bot to teleport
 
+type CopyType = 'toBot' | 'botToMe' | null
+
 export function Header({ status, uptime }: HeaderProps) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<CopyType>(null)
 
   const formatUptime = (seconds: number) => {
     const h = Math.floor(seconds / 3600)
@@ -21,7 +23,7 @@ export function Header({ status, uptime }: HeaderProps) {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
 
-  const handleTeleport = async () => {
+  const handleTeleportToBot = async () => {
     const { x, y, z } = status.position
 
     // Calculate safe Y position - if underground, go to surface
@@ -36,8 +38,17 @@ export function Header({ status, uptime }: HeaderProps) {
     const command = `/tp @p ${tpX} ${tpY} ${tpZ}`
 
     await navigator.clipboard.writeText(command)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setCopied('toBot')
+    setTimeout(() => setCopied(null), 2000)
+  }
+
+  const handleSummonBot = async () => {
+    // Teleport bot to nearest player
+    const command = `/tp bot @p`
+
+    await navigator.clipboard.writeText(command)
+    setCopied('botToMe')
+    setTimeout(() => setCopied(null), 2000)
   }
 
   return (
@@ -88,22 +99,43 @@ export function Header({ status, uptime }: HeaderProps) {
 
           {/* Right Side Info */}
           <div className="flex items-center gap-6">
-            {/* Position - Clickable for teleport */}
-            <button
-              onClick={handleTeleport}
-              className="flex items-center gap-2 text-ember-text-muted hover:text-ember-text px-3 py-1.5 rounded-lg hover:bg-ember-card-border/50 transition-colors group"
-              title="Click to copy teleport command"
-            >
-              <MapPin className="w-4 h-4 text-ember-primary" />
-              <span className="font-mono text-sm">
-                {status.position.x.toFixed(0)}, {status.position.y.toFixed(0)}, {status.position.z.toFixed(0)}
-              </span>
-              {copied ? (
-                <Check className="w-4 h-4 text-green-500" />
-              ) : (
-                <Copy className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />
-              )}
-            </button>
+            {/* Position & Teleport Controls */}
+            <div className="flex items-center gap-1">
+              {/* Go to bot */}
+              <button
+                onClick={handleTeleportToBot}
+                className="flex items-center gap-2 text-ember-text-muted hover:text-ember-text px-3 py-1.5 rounded-lg hover:bg-ember-card-border/50 transition-colors group"
+                title="Copy command to teleport YOU to the bot"
+              >
+                <MapPin className="w-4 h-4 text-ember-primary" />
+                <span className="font-mono text-sm">
+                  {status.position.x.toFixed(0)}, {status.position.y.toFixed(0)}, {status.position.z.toFixed(0)}
+                </span>
+                {copied === 'toBot' ? (
+                  <Check className="w-4 h-4 text-green-500" />
+                ) : (
+                  <Copy className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                )}
+              </button>
+
+              {/* Summon bot to player */}
+              <button
+                onClick={handleSummonBot}
+                className={cn(
+                  "p-1.5 rounded-lg transition-colors",
+                  copied === 'botToMe'
+                    ? "bg-green-900/50 text-green-400"
+                    : "text-ember-text-muted hover:text-ember-primary hover:bg-ember-card-border/50"
+                )}
+                title="Copy command to summon BOT to you"
+              >
+                {copied === 'botToMe' ? (
+                  <Check className="w-4 h-4" />
+                ) : (
+                  <Navigation className="w-4 h-4" />
+                )}
+              </button>
+            </div>
 
             {/* Biome */}
             <div className="px-2 py-1 bg-ember-card rounded border border-ember-card-border">
@@ -124,7 +156,9 @@ export function Header({ status, uptime }: HeaderProps) {
       {/* Toast notification for copied */}
       {copied && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-4 py-2 bg-green-900/90 text-green-100 rounded-lg font-mono text-sm shadow-lg animate-fade-in">
-          Teleport command copied! Paste in Minecraft chat.
+          {copied === 'toBot'
+            ? 'Teleport command copied! Paste in Minecraft to go to bot.'
+            : 'Summon command copied! Paste in Minecraft to bring bot to you.'}
         </div>
       )}
     </header>
