@@ -168,6 +168,8 @@ IMPORTANT CHAT RULES:
             if chat_messages:
                 chat_log = "\n".join(chat_messages)
                 observation += f"Chat log: {chat_log}\n\n"
+                # Log chat to console so we can verify it's being received
+                print(f"\033[36m[Chat Received] {chat_log}\033[0m")
             else:
                 observation += f"Chat log: None\n\n"
 
