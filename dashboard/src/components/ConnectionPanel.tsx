@@ -40,7 +40,7 @@ interface ConnectionPanelProps {
 }
 
 export function ConnectionPanel({ connected, running, botProfiles, activeBotId, onStart, onStop, onClear }: ConnectionPanelProps) {
-  const [port, setPort] = useState('62305')
+  const [port, setPort] = useState(localStorage.getItem('voyager_port') || '62305')
   // API key is stored in localStorage after first use, or loaded from environment
   const [apiKey, setApiKey] = useState(localStorage.getItem('voyager_api_key') || '')
   const [showApiKey, setShowApiKey] = useState(false)
@@ -51,6 +51,7 @@ export function ConnectionPanel({ connected, running, botProfiles, activeBotId, 
 
   const handleStart = () => {
     if (apiKey) {
+      localStorage.setItem('voyager_port', port)
       localStorage.setItem('voyager_api_key', apiKey)
       localStorage.setItem('voyager_bot_id', selectedBotId)
       onStart(parseInt(port), apiKey, selectedBotId)
