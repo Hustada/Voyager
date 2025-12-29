@@ -260,6 +260,9 @@ app.post("/step", async (req, res) => {
         }
     }
 
+    let lastTeleportTime = 0;
+    const TELEPORT_COOLDOWN = 5000; // 5 seconds cooldown between teleports
+
     function onStuck(posThreshold) {
         const currentPos = bot.entity.position;
         bot.stuckPosList.push(currentPos);
@@ -270,7 +273,11 @@ app.post("/step", async (req, res) => {
             const posDifference = currentPos.distanceTo(oldestPos);
 
             if (posDifference < posThreshold) {
-                teleportBot(); // execute the function
+                const now = Date.now();
+                if (now - lastTeleportTime > TELEPORT_COOLDOWN) {
+                    teleportBot();
+                    lastTeleportTime = now;
+                }
             }
 
             // Remove the oldest time from the list
