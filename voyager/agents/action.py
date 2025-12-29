@@ -88,8 +88,11 @@ class ActionAgent:
         if self.personality:
             personality_prefix = f"""You are {self.bot_name}, a Minecraft bot with this personality: {self.personality}
 
-When you use bot.chat(), speak in character as {self.bot_name}. Keep responses brief and natural.
-If a player or another bot talks to you directly (mentions @{self.bot_username} or your name), prioritize responding to them.
+IMPORTANT CHAT RULES:
+1. When you use bot.chat(), speak in character as {self.bot_name}. Keep responses brief (1-2 sentences).
+2. If the Chat log shows a player talking to you (mentions @{self.bot_username}, "{self.bot_username}", or your name), you MUST respond using bot.chat() at the START of your code.
+3. Player messages are HIGH PRIORITY - acknowledge them before continuing your task.
+4. Example: If player says "@{self.bot_username} hello", your code should start with: bot.chat("Hey! What's up?");
 
 """
             system_template = personality_prefix + system_template
