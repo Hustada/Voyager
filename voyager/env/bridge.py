@@ -24,6 +24,7 @@ class VoyagerEnv(gym.Env):
         server_port=3000,
         request_timeout=600,
         log_path="./logs",
+        bot_username="bot",  # Minecraft username for the bot
     ):
         if not mc_port and not azure_login:
             raise ValueError("Either mc_port or azure_login must be specified")
@@ -37,6 +38,7 @@ class VoyagerEnv(gym.Env):
         self.server_port = server_port
         self.request_timeout = request_timeout
         self.log_path = log_path
+        self.bot_username = bot_username
         self.mineflayer = self.get_mineflayer_process(server_port)
         if azure_login:
             self.mc_instance = self.get_mc_instance()
@@ -162,6 +164,7 @@ class VoyagerEnv(gym.Env):
 
         self.reset_options = {
             "port": self.mc_port,
+            "username": self.bot_username,
             "reset": options.get("mode", "hard"),
             "inventory": options.get("inventory", {}),
             "equipment": options.get("equipment", []),

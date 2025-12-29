@@ -108,17 +108,6 @@ class Voyager:
         :param skill_library_dir: skill library dir
         :param resume: whether to resume from checkpoint
         """
-        # init env
-        self.env = VoyagerEnv(
-            mc_port=mc_port,
-            azure_login=azure_login,
-            server_port=server_port,
-            request_timeout=env_request_timeout,
-        )
-        self.env_wait_ticks = env_wait_ticks
-        self.reset_placed_if_failed = reset_placed_if_failed
-        self.max_iterations = max_iterations
-
         # set openai api key
         os.environ["OPENAI_API_KEY"] = openai_api_key
 
@@ -126,6 +115,19 @@ class Voyager:
         self.bot_id = bot_id
         self.bot_profile = self._load_bot_profile(bot_id, bot_profile_path)
         self.bot_name = self.bot_profile.get("name", bot_id) if self.bot_profile else bot_id
+        self.bot_username = self.bot_profile.get("username", bot_id) if self.bot_profile else bot_id
+
+        # init env with bot username
+        self.env = VoyagerEnv(
+            mc_port=mc_port,
+            azure_login=azure_login,
+            server_port=server_port,
+            request_timeout=env_request_timeout,
+            bot_username=self.bot_username,
+        )
+        self.env_wait_ticks = env_wait_ticks
+        self.reset_placed_if_failed = reset_placed_if_failed
+        self.max_iterations = max_iterations
 
         # init agents
         self.action_agent = ActionAgent(

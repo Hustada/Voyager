@@ -29,7 +29,7 @@ app.post("/start", (req, res) => {
     bot = mineflayer.createBot({
         host: "127.0.0.1", // minecraft server ip
         port: req.body.port, // minecraft server port
-        username: "bot",
+        username: req.body.username || "bot",
         auth: "offline",
         checkTimeoutInterval: 60 * 60 * 1000,
     });
