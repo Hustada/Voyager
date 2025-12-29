@@ -1,0 +1,3 @@
+async function craftWoodenPlanks(bot) {
+    // The function is designed to craft wooden planks from acacia logs. It first checks if the bot has at least one acacia log in its inventory. If there is a sufficient quantity, it proceeds to craft four wooden planks from one acacia log. After the crafting process, it confirms the successful creation of the wooden planks. If there are not enough acacia logs, it indicates that crafting cannot be performed.
+}

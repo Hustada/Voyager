@@ -1,0 +1,3 @@
+async function craftCraftingTable(bot) {
+    // The function is designed to craft a crafting table using acacia planks. It first checks if there are at least four acacia planks in the inventory. If there are enough planks, it proceeds to craft the crafting table. After successfully crafting, it confirms the action. If there are not enough planks, it indicates that crafting cannot be completed.
+}
