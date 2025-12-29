@@ -124,9 +124,11 @@ export function ConnectionPanel({ connected, running, botProfiles, activeBotId, 
               Minecraft LAN Port
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={port}
-              onChange={(e) => setPort(e.target.value)}
+              onChange={(e) => setPort(e.target.value.replace(/\D/g, ''))}
               disabled={running}
               className="w-full px-3 py-2 bg-ember-background border border-ember-card-border rounded-lg font-mono text-ember-text focus:border-ember-primary focus:outline-none disabled:opacity-50"
               placeholder="62305"
