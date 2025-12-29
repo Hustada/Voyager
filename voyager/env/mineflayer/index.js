@@ -123,7 +123,9 @@ app.post("/start", (req, res) => {
 
         // Listen for player chat messages and emit as chatEvent
         bot.on("chat", (username, message) => {
+            console.log(`[DEBUG CHAT] Received from ${username}: ${message}`);
             if (username !== bot.username) {
+                console.log(`[DEBUG CHAT] Emitting chatEvent for ${username}`);
                 bot.emit("chatEvent", username, message);
             }
         });
