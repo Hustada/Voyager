@@ -121,6 +121,13 @@ app.post("/start", (req, res) => {
         ]);
         skills.inject(bot);
 
+        // Listen for player chat messages and emit as chatEvent
+        bot.on("chat", (username, message) => {
+            if (username !== bot.username) {
+                bot.emit("chatEvent", username, message);
+            }
+        });
+
         if (req.body.spread) {
             bot.chat(`/spreadplayers ~ ~ 0 300 under 80 false @s`);
             await bot.waitForTicks(bot.waitTicks);
